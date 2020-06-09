@@ -8,6 +8,7 @@ pipeline {
     }
     agent any
     stages {
+	cleanWs()    
         stage('Az login') {
             steps {
                 withCredentials([string(credentialsId: 'RafaelAzPass', variable: 'Az_pass')]) {
