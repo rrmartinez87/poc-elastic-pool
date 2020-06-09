@@ -56,29 +56,7 @@ pipeline {
 
 	    }
 
-	    options {
-
-                azureKeyVault(
-
-                    credentialID: 'jenkins-sp-sql', 
-
-                    keyVaultURL: 'https://Sqltfstatekv-test-03.vault.azure.net/', 
-
-                    secrets: [
-
-                        [envVariable: 'TF_VAR_client_id', name: 'spn-id', secretType: 'Secret'],
-
-                        [envVariable: 'TF_VAR_client_secret', name: 'spn-secret', secretType: 'Secret'],
-
-                        [envVariable: 'StorageAccountAccessKey', name: 'TerraformSASToken', secretType: 'Secret']
-
-                    ]
-
-                )
-
-            }	
-
-		steps {
+	        steps {
 
                 sh '''
 
