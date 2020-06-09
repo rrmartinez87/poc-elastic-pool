@@ -93,7 +93,7 @@ pipeline {
         stage('Clean WorkSpace') {
             steps {
                 echo "Wiping workspace $pwd"
-                #cleanWs()
+            
             }
         }
     }
