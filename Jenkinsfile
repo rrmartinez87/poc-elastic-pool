@@ -57,6 +57,7 @@ pipeline {
                 -backend-config="container_name=sqltfstate" \
                 -backend-config="access_key=$StorageAccountAccessKey" \
                 -backend-config="key=terraform.tfstate"
+		terraform force-unlock -force ac32c2c9-1902-7f21-fec7-07df67bbf2d2
 		terraform plan -no-color -out out.plan
                 terraform apply -no-color out.plan
                 '''
