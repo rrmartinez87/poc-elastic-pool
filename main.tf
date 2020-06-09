@@ -120,7 +120,10 @@ resource "null_resource" "set_server_tls_version" {
   provisioner local-exec {
     command = "az sql server update --name ${azurerm_mssql_server.dbserver.name} --resource-group ${azurerm_resource_group.rg.name} --minimal-tls-version ${local.tls_version}"
   }
-}
+depends_on = [
+    azurerm_private_endpoint.endpoint
+  ]
+	}
 
 /*
 // Create vnet rule for the subnet
