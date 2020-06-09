@@ -21,7 +21,7 @@ pipeline {
         }
         stage('Clone repository') {
         steps {
-            git branch 'master', credentialsId: 'Github', url: 'https://github.com/rrmartinez87/poc-elastic-pool.git'
+            git branch: 'master', credentialsId: 'Github', url: 'https://github.com/rrmartinez87/poc-elastic-pool.git'
             }
         }
 	stage('Set Terraform path') {
