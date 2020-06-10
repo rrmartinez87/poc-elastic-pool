@@ -1,5 +1,5 @@
 /*
-  Input variable definitions for an Azure SQL Single database resource and its dependences
+  Input variable definitions for an Azure SQL elastic pool resource and its dependences
 */
 
 // Variables to indicate whether some resources should be created or not
@@ -111,6 +111,25 @@ variable "max_size_gb" {
     default = 5
 }
 
+// Single database variables
+variable "single_database_name" { 
+    description = "The name of the Ms SQL Database. Changing this forces a new resource to be created."
+    type = string
+    default = "yuma-singledb"
+}
+
+variable "service_tier" { 
+    description = "The id of the Ms SQL Server on which to create the database. Changing this forces a new resource to be created."
+    type = string
+    default = "Basic"
+}
+
+variable "single_max_size_gb" { 
+    description = "The max size of the database in gigabytes."
+    type = number
+    default = 2
+}
+
 // Virtual network variables
 variable "vnet_name" {
     description = "The name of the virtual network. Changing this forces a new resource to be created."
@@ -150,9 +169,21 @@ variable "service_connection_name" {
     default = "service_connection_name" 
 }
 
-// VNet rule name variable
-variable "vnet_rule_name" {
-    description = "he name of the SQL virtual network rule. Changing this forces a new resource to be created. Cannot be empty and must only contain alphanumeric characters and hyphens. Cannot start with a number, and cannot start or end with a hyphen."
+variable "requires_manual_approval" {
+    description = "Does the Private Endpoint require Manual Approval from the remote resource owner? Changing this forces a new resource to be created."
+    type = bool
+    default = false 
+}
+
+// Private DNS zone variables
+variable "private_dns_zone_name" {
+    description = "The name of the Private DNS Zone. Must be a valid domain name."
     type = string
-    default = "vnet-rule"  
+    default = "privatelink.database.windows.net"  
+}
+
+variable "private_dns_zone_vnet_link" {
+    description = "The name of the Private DNS Zone. Must be a valid domain name."
+    type = string
+    default = "private_dns_zone_vnet_link"  
 }
