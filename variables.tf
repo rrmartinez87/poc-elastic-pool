@@ -289,12 +289,12 @@ variable "os_profile_computer_name" {
 variable "os_profile_admin_username" {
     description = "(Required) Specifies the name of the local administrator account."
     type = string
-    default = "AzureUser"
+    default = "adminUsername"
 }
 variable "os_profile_admin_password" {
     description = "(Optional) Specifies the type of managed disk to create. Possible values are either Standard_LRS, StandardSSD_LRS, Premium_LRS or UltraSSD_LRS."
     type = string
-    default = "AzureUser2020"
+    default = "Passw0rd1234"
 }
 variable "os_profile_windows_config_provision_vm_agent" {
     description = "(Optional) Should the Azure Virtual Machine Guest Agent be installed on this Virtual Machine? Defaults to false."
