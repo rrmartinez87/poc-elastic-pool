@@ -16,10 +16,7 @@ pipeline {
                    az account clear
                    az login -u rafael.martinez@globant.com -p $Az_pass
                    az account set -s a7b78be8-6f3c-4faf-a43d-285ac7e92a05
-		   $secureString = ConvertTo-SecureString "$Az_pass" -AsPlainText -Force
-                   $Credential = New-Object System.Management.Automation.PSCredential ("rafael.martinez@globant.com", $secureString)
-	           Connect-AzAccount -Credential $Credential -a7b78be8-6f3c-4faf-a43d-285ac7e92a05  
-                   '''
+		   '''
 			
                 cleanWs()
 		}
