@@ -2,24 +2,11 @@
   Input variable definitions for an Azure SQL elastic pool resource and its dependences
 */
 
-// Variables to indicate whether some resources should be created or not
-variable "create_resource_group" {
-    description = "Flag indicating whether the resource group must be created or use existing"
-    type = bool
-    default = true
-}
-
-variable "create_database_server" {
-    description = "Flag indicating whether the database server must be created or use existing"
-    type = bool
-    default = true
-}
-
 // Common variables definition
 variable "resource_group_name" { 
     description = "The name of the resource group in which to create the elastic pool. This must be the same as the resource group of the underlying SQL server."
     type = string
-    default = "rg-sql-elastic-poc"
+    default = "rg-elastic-poc"
 }
 
 variable "location" { 
@@ -66,7 +53,7 @@ variable "administrator_login_password" {
 variable "elastic_pool_name" { 
     description = "The name of the elastic pool. This needs to be globally unique. Changing this forces a new resource to be created."
     type = string
-    default = "yuma-elastic"
+    default = "elastic_pool"
 }
 
 variable "sku_name" { 
@@ -187,6 +174,8 @@ variable "private_dns_zone_vnet_link" {
     type = string
     default = "private_dns_zone_vnet_link"  
 }
+
+//--- Virtual machines variables for testing
 // Ip of the Virtual machine
 variable "azurerm_public_ip_name" {
     description = "The name of the Ip"
