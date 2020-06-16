@@ -223,9 +223,9 @@ resource "azurerm_virtual_machine" "vm" {
   }
 
     os_profile {
-    computer_name      = var.os_profile_computer_name
-    admin_username     = "AzureUser" 
-    admin_password     = "AzureUser2020" 
+    computer_name      = var.azurerm_virtual_machine_name
+    admin_username     = var.os_profile_admin_username 
+    admin_password     = var.os_profile_admin_password 
   
   }
 
