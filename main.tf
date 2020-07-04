@@ -1,254 +1,129 @@
-// Azure provider configuration
+//--- Set Terraform API version
 terraform {
-  required_version = ">= 0.12"
-  backend "azurerm" {}
+  required_version = ">=0.12.0"
 }
-provider "azurerm" {
-    version = "~>2.0"
-    features {}
-	subscription_id = "a7b78be8-6f3c-4faf-a43d-285ac7e92a05"
-	tenant_id       = "c160a942-c869-429f-8a96-f8c8296d57db"
- }
-// Resource required to generate random guids
-resource "random_uuid" "poc" { }
 
-// Azure resource group definition
+
+//--- Set Azure provider configuration
+provider "azurerm" {
+    version = "=2.13.0"
+    subscription_id = "a265068d-a38b-40a9-8c88-fb7158ccda23"
+    features {}
+}
+
+
+//--- Azure resource group definition
 resource "azurerm_resource_group" "rg" {
 
-  // Arguments required by Terraform API
-  name = join(local.separator, [var.resource_group_name, random_uuid.poc.result])
-  location = var.location
-
-  // Optional Terraform resource manager arguments but required by architecture
-  tags = var.tags
+    name = var.resource_group
+    location = var.location
+    tags = var.tags
 }
 
-// Azure SQL database server resource definition
-resource "azurerm_mssql_server" "dbserver" {
 
-  // Arguments required by Terraform API
-  name = join(local.separator, [var.server_name, random_uuid.poc.result])
-  resource_group_name = azurerm_resource_group.rg.name
-  location = azurerm_resource_group.rg.location
-  version = var.server_version
-  administrator_login = var.administrator_login
-  administrator_login_password = var.administrator_login_password
-  
-  // Optional Terraform resource manager arguments but required by architecture
-  connection_policy = local.connection_type
-  public_network_access_enabled = local.public_network_access
-  tags = var.tags
+//--- Create Azure SQL logical database server by using module
+module "database_server" {
+
+    source = "./modules/database_server"
+
+    // Set module parameters
+    resource_group = azurerm_resource_group.rg.name
+    location = azurerm_resource_group.rg.location
+    server_name = var.server_name
+    tags = var.tags
+
+    // Server and AAD users configuration
+    server_admin_login = var.server_admin_login
+    create_server_admin_secret = var.create_server_admin_secret
+    server_admin_password = var.server_admin_password
+    server_admin_key_vault_secret_name = var.server_admin_key_vault_secret_name
+    server_admin_key_vault_id = var.server_admin_key_vault_id
+    azuread_admin_login = var.azuread_admin_login
+    azuread_admin_object_id  = var.azuread_admin_object_id
+    azuread_admin_tenant_id = var.azuread_admin_tenant_id
+
+    // Logging/auditing parameters
+    auditing_storage_account_name = var.auditing_storage_account_name
+    auditing_storage_account_tier = var.auditing_storage_account_tier
+    auditing_storage_account_replication_type = var.auditing_storage_account_replication_type
+    storage_account_access_key_is_secondary = var.storage_account_access_key_is_secondary 
+    retention_in_days = var.retention_in_days
+
+    // Advanced Data Security (ADS) settings
+    advanced_data_security_storage_account_name = var.advanced_data_security_storage_account_name
+    advanced_data_security_storage_account_tier = var.advanced_data_security_storage_account_tier
+    advanced_data_security_storage_account_replication_type = var.advanced_data_security_storage_account_replication_type
+    advanced_data_security_storage_container_name = var.advanced_data_security_storage_container_name
+    threat_protection_email_addresses = var.threat_protection_email_addresses
+    vulnerability_assessment_email_addresses = var.vulnerability_assessment_email_addresses
 }
 
-// Azure SQL elastic pool resource definition
-resource "azurerm_mssql_elasticpool" "elastic" {
-  
-  // Arguments required by Terraform API
-  name = join(local.separator, [var.elastic_pool_name, random_uuid.poc.result])
-  resource_group_name = azurerm_resource_group.rg.name
-  location = azurerm_resource_group.rg.location
-  server_name = azurerm_mssql_server.dbserver.name
 
-  sku {
-    name = var.sku_name
-    tier = var.sku_tier
-    family = var.sku_family // optional based on tier
-    capacity = var.sku_capacity
-  }
+//--- Create Azure SQL Elastic Pool by using module
+module "elastic_pool" {
 
-  per_database_settings {
-    min_capacity = var.db_settings_min_capacity
-    max_capacity = var.db_settings_max_capacity
-  }
+    source = "./modules/elastic_pool"
 
-  // Optional Terraform resource manager arguments but required by architecture
-  max_size_gb = var.max_size_gb
-  tags = var.tags
+    // Set module parameters
+    elastic_pool_name = var.elastic_pool_name
+    resource_group = var.resource_group
+    location = var.location
+    server_name = module.database_server.server_name
+    max_size_gb = var.max_size_gb
+    license_type = var.license_type
+    zone_redundant = var.zone_redundant
+    tags = var.tags
+ 
+    // Service tier settings
+    sku_name = var.sku_name
+    sku_tier = var.sku_tier
+    sku_capacity = var.sku_capacity
+    sku_family = var.sku_family
+
+    // Elastic pool per database settings
+    db_settings_min_capacity = var.db_settings_min_capacity
+    db_settings_max_capacity = var.db_settings_max_capacity
 }
 
-// Create sample database in the elastic pool
-resource "azurerm_mssql_database" "singledb" {
 
-  // Arguments required by Terraform API
-  name = var.single_database_name
-  server_id = azurerm_mssql_server.dbserver.id
-  sample_name = local.sample_database
+//--- Create virtual network/subnet to set up private endpoint
+module "virtual_network" {
 
-  // Optional Terraform resource manager arguments but required by architecture
-  elastic_pool_id = azurerm_mssql_elasticpool.elastic.id
-  tags = var.tags
+    source = "./modules/virtual_network"
+
+    // Set module parameters
+    create_vnet = var.create_vnet
+    resource_group = azurerm_resource_group.rg.name
+    location = azurerm_resource_group.rg.location
+    tags = var.tags
+    vnet_name = var.vnet_name
+    vnet_address_space = var.vnet_address_space
+    subnet_name = var.subnet_name
+    subnet_address_prefixes = var.subnet_address_prefixes
 }
 
-// Create virtual network to set up a private endpoint later
-resource "azurerm_virtual_network" "vnet" {
-  
-  // Arguments required by Terraform API
-  name                = join(local.separator, [var.vnet_name, random_uuid.poc.result])
-  address_space       = [var.vnet_address_space]
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
 
-  // Optional Terraform resource manager arguments but required by architecture
-  tags = var.tags
-}
+//--- Create Private Endpoint
+module "private_endpoint" {
 
-// Create associated subnet
-resource "azurerm_subnet" "subnet" {
-  
-  // Arguments required by Terraform API
-  name                 = join(local.separator, [var.subnet_name, random_uuid.poc.result])
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = var.subnet_address_prefixes
-  
-  // Optional Terraform resource manager arguments but required by architecture
-  enforce_private_link_endpoint_network_policies = local.enforce_private_link_endpoint_policies
-  service_endpoints = local.service_endpoints
-}
+    source = "./modules/private_endpoint"
 
-// Create a private endpoint to connect to the server using private access
-resource "azurerm_private_endpoint" "endpoint" {
-  
-  // Arguments required by Terraform API
-  name                = join(local.separator, [var.private_endpoint_name, random_uuid.poc.result])
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  subnet_id           = azurerm_subnet.subnet.id
+    // Set module parameters
+    resource_group = azurerm_resource_group.rg.name
+    location = azurerm_resource_group.rg.location
+    tags = var.tags
 
-  private_service_connection {
-    name                           = var.service_connection_name
-    private_connection_resource_id = azurerm_mssql_server.dbserver.id
-    is_manual_connection           = var.requires_manual_approval
-    subresource_names = ["sqlServer"]
-  }
-
-  // Optional Terraform resource manager arguments but required by architecture
-  tags = var.tags
-}
-
-// Create a Private DNS Zone for SQL Database domain.
-resource "azurerm_private_dns_zone" "dnszone" {
-  
-  // Arguments required by Terraform API
-  name = var.private_dns_zone_name
-  resource_group_name = azurerm_resource_group.rg.name
-
-  // Optional Terraform resource manager arguments but required by architecture
-  tags = var.tags
-}
-
-// Create an association link with the Virtual Network.
-resource "azurerm_private_dns_zone_virtual_network_link" "dnslink" {
-  
-  // Arguments required by Terraform API
-  name = var.private_dns_zone_vnet_link
-  resource_group_name = azurerm_resource_group.rg.name
-  private_dns_zone_name = azurerm_private_dns_zone.dnszone.name
-  virtual_network_id = azurerm_virtual_network.vnet.id
-
-  // Optional Terraform resource manager arguments but required by architecture
-  tags = var.tags
-}
-
-// Create a DNS Zone Group to associate the private endpoint with the Private DNS Zone.
-resource "null_resource" "set_private_dns_zone_config" { 
-  provisioner local-exec {
-    command = "az network private-endpoint dns-zone-group create --endpoint-name ${azurerm_private_endpoint.endpoint.name} --name MyZoneGroup --private-dns-zone ${azurerm_private_dns_zone.dnszone.id} --resource-group ${azurerm_resource_group.rg.name} --zone-name 'privatelink.database.windows.net'"
-  }
-
-  depends_on = [
-    azurerm_private_dns_zone_virtual_network_link.dnslink
-  ]
-}
-
-// Set database server TLS version after server creation (unsupported Azure provider argument)
-// This setting can only be configured once a private enpoint is in place
-resource "null_resource" "set_server_tls_version" { 
-  provisioner local-exec {
-    // There's no way to change setting this by using PowerShell
-    command = "az sql server update --name ${azurerm_mssql_server.dbserver.name} --resource-group ${azurerm_resource_group.rg.name} --minimal-tls-version ${local.tls_version}"
-  }
-
-  depends_on = [
-    azurerm_private_endpoint.endpoint
-  ]
-}
-
-//--- Create Virtual Machine with Azure Data Studio to test connectivity to the instance/database
-//ip
-resource "azurerm_public_ip" "ip" {
-  name                    = var.azurerm_public_ip_name
-  location                = azurerm_resource_group.rg.location
-  resource_group_name     = azurerm_resource_group.rg.name
-  allocation_method       = var.azurerm_public_ip_allocation_method
-  idle_timeout_in_minutes = var.azurerm_public_ip_idle_timeout_in_minutes
-  tags = {
-    environment = var.azurerm_public_ip_enviroment
-  }
-}
-// Network Interface
-resource "azurerm_network_interface" "ni" {
-  name                = var.azurerm_network_interface_name
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  ip_configuration {
-    name                          = var.ip_configuration_name
-    subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = var.private_ip_address_allocation
-    //private_ip_address            = var.private_ip_address
-    public_ip_address_id          = azurerm_public_ip.ip.id
-
-  }
-}
-// virtual machine
-resource "azurerm_virtual_machine" "vm" {
-  name                  = var.azurerm_virtual_machine_name
-  location              = azurerm_resource_group.rg.location
-  resource_group_name   = azurerm_resource_group.rg.name
-  network_interface_ids = [azurerm_network_interface.ni.id]
-  vm_size               = var.azurerm_virtual_machine_vm_size
-
-  storage_image_reference {
-    publisher = var.storage_image_reference_publisher
-    offer     = var.storage_image_reference_offer
-    sku       = var.storage_image_reference_sku
-    version   = var.storage_image_reference_version
-  }
-
-  storage_os_disk {
-    name              = var.storage_os_disk_name
-    caching           = var.storage_os_disk_caching
-    create_option     = var.storage_os_disk_create_option
-    managed_disk_type = var.storage_os_disk_managed_disk_type
-  }
-
-    os_profile {
-    computer_name      = var.azurerm_virtual_machine_name
-    admin_username     = var.os_profile_admin_username 
-    admin_password     = var.os_profile_admin_password 
-  
-  }
-
-  os_profile_windows_config {
-    provision_vm_agent = var.os_profile_windows_config_provision_vm_agent
-  winrm  {  //Here defined WinRM connectivity config
-      protocol = var.os_profile_windows_config_protocol  
-    }
-  }
-}
-//  virtual machine extension
-resource "azurerm_virtual_machine_extension" "vm_extension" {
-  name                       = var.vm_extension_name
-  virtual_machine_id         = azurerm_virtual_machine.vm.id
-  publisher                  = var.vm_extension_publisher
-  type                       = var.vm_extension_type
-  type_handler_version       = var.vm_extension_type_handler_version
-  auto_upgrade_minor_version = var.vm_extension_auto_upgrade_minor_version
-
-  settings = <<SETTINGS
-    {
-    "commandToExecute": "Powershell -c Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')); choco install azure-data-studio -y"
-    }
-SETTINGS
+    // Endpoint configuration
+    vnet_resource_group = var.vnet_resource_group
+    private_endpoint_name = var.private_endpoint_name
+    subnet_id = var.create_vnet ? module.virtual_network.subnet_id : var.subnet_id
+    private_service_connection_name = var.private_service_connection_name
+    database_server_id = module.database_server.server_id
+    vnet_id = var.create_vnet ? module.virtual_network.vnet_id : var.vnet_id
+    
+    // DNS configuration
+    private_dns_zone_name = var.private_dns_zone_name
+    private_dns_zone_vnet_link_name = var.private_dns_zone_vnet_link_name
+    private_dns_zone_config_name = var.private_dns_zone_config_name
+    private_dns_zone_group_name = var.private_dns_zone_group_name
 }
